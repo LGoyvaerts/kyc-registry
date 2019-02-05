@@ -1,0 +1,86 @@
+{
+	"info": {
+		"_postman_id": "8e628fb6-ad16-4dd1-aa0b-e5ab9f67b10f",
+		"name": "kyc-register",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/peer",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:8080/peer",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"peer"
+					]
+				},
+				"description": "peer template"
+			},
+			"response": []
+		},
+		{
+			"name": "/peer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"id\": null,\n    \"peerIp\": \"10.10.10.8\",\n    \"registred\": \"2018-04-13T01:44:01.839+02:00\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/peer",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"peer"
+					]
+				},
+				"description": "peer save"
+			},
+			"response": []
+		},
+		{
+			"name": "/peers",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:8080/peers",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"peers"
+					]
+				},
+				"description": "peers"
+			},
+			"response": []
+		}
+	]
+}
