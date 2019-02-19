@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.core.MessagePostProcessor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -36,7 +38,7 @@ public class BlocksController {
     @MessageMapping("/addBlock")
     @SendTo("/topic/newBlock")
     public String addBlock(String message) {
-        log.info("[/addBlock] Block Received: " + message);
+        log.info("[/addBlock] New Block received from Client.");
         return message;
     }
 
@@ -57,6 +59,7 @@ public class BlocksController {
                 targetUuid = firstUsername.getUsername();
             }
             simpMessagingTemplate.convertAndSend("/topic/getBlocks/" + targetUuid, blockRequestAsString);
+
         } else {
             log.error("[/getBlocks] First Username was not found.");
         }
@@ -67,5 +70,13 @@ public class BlocksController {
     public String setBlocks(@Payload String message, @DestinationVariable("uuId") String uuId) {
         log.info("[/setBlocks] Blocks of Client with UUID = " + uuId + " are being set");
         return message;
+    }
+
+    @MessageMapping("/invalidate")
+    @SendTo("/topic/invalidate")
+    public String invalidateUsername(@Payload String message) {
+        log.info("[/invalidate] Client invalidated. UUID: " + message);
+        usernameService.removeUsernameByName(message);
+        return "Client with UUID " + message + " invalidated.";
     }
 }

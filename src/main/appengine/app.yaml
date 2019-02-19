@@ -1,0 +1,25 @@
+runtime: java
+env: flex
+
+runtime_config:  # Optional
+  jdk: openjdk8
+
+handlers:
+- url: /.*
+  script: this field is required, but ignored
+
+manual_scaling:
+  instances: 1
+
+readiness_check:
+  check_interval_sec: 60
+  timeout_sec: 30
+  failure_threshold: 5
+  success_threshold: 5
+  app_start_timeout_sec: 1500
+
+liveness_check:
+  check_interval_sec: 60
+  timeout_sec: 30
+  failure_threshold: 5
+  success_threshold: 5
