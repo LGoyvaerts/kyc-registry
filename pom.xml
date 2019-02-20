@@ -6,7 +6,7 @@
     <groupId>ch.ti8m.codecamp.kycoftrust</groupId>
     <artifactId>kycregister</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>war</packaging>
 
     <name>kycregister</name>
     <description>kyc peerEntity register</description>
@@ -29,6 +29,30 @@
         <appengine.maven.plugin>1.3.2</appengine.maven.plugin>
 
     </properties>
+
+    <profiles>
+        <profile>
+            <id>beanstalk</id>
+            <build>
+                <finalName>${project.name}-eb</finalName>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/cloud/config/*.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <dependencies>
 
@@ -109,11 +133,11 @@
             <version>5.5.1</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.google.cloud</groupId>
-            <artifactId>google-cloud-logging-logback</artifactId>
-            <version>0.67.0-alpha</version>
-        </dependency>
+        <!--<dependency>-->
+        <!--<groupId>com.google.cloud</groupId>-->
+        <!--<artifactId>google-cloud-logging-logback</artifactId>-->
+        <!--<version>0.67.0-alpha</version>-->
+        <!--</dependency>-->
 
         <!-- Exclude any jul-to-slf4j -->
         <dependency>
@@ -138,14 +162,14 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>com.google.cloud.tools</groupId>
-                <artifactId>appengine-maven-plugin</artifactId>
-                <version>${appengine.maven.plugin}</version>
-                <configuration>
-                    <version>1</version>
-                </configuration>
-            </plugin>
+            <!--<plugin>-->
+            <!--<groupId>com.google.cloud.tools</groupId>-->
+            <!--<artifactId>appengine-maven-plugin</artifactId>-->
+            <!--<version>${appengine.maven.plugin}</version>-->
+            <!--<configuration>-->
+            <!--<version>1</version>-->
+            <!--</configuration>-->
+            <!--</plugin>-->
             <!--
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

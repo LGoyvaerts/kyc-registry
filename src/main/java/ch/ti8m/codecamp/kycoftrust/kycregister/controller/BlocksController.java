@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.core.MessagePostProcessor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -74,9 +72,8 @@ public class BlocksController {
 
     @MessageMapping("/invalidate")
     @SendTo("/topic/invalidate")
-    public String invalidateUsername(@Payload String message) {
-        log.info("[/invalidate] Client invalidated. UUID: " + message);
-        usernameService.removeUsernameByName(message);
-        return "Client with UUID " + message + " invalidated.";
+    public String invalidateBlock(@Payload String message) {
+        log.info("[/invalidate] Block invalidated. Block: " + message);
+        return message;
     }
 }
