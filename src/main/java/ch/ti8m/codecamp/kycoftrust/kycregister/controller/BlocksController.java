@@ -13,7 +13,10 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
+
+import java.time.ZonedDateTime;
 
 @Controller
 public class BlocksController {
@@ -75,5 +78,33 @@ public class BlocksController {
     public String invalidateBlock(@Payload String message) {
         log.info("[/invalidate] Block invalidated. Block: " + message);
         return message;
+    }
+
+    @Scheduled(initialDelay = 1000L, fixedDelay = 1000L)
+    public void pingToClient() {
+        Iterable<UsernameEntity> usernameEntityIterable = usernameService.findAll();
+
+        for (UsernameEntity usernameEntity : usernameEntityIterable) {
+            if (usernameEntity.getRegistred().isBefore(ZonedDateTime.now().minusSeconds(2))) {
+                log.info("Removing Client from List: " + usernameEntity.getUsername());
+                alertUsernameDeletion(usernameEntity.getUsername());
+                usernameService.deleteUsername(usernameEntity);
+            }
+        }
+
+        simpMessagingTemplate.convertAndSend("/topic/ping", "ping");
+
+    }
+
+    @MessageMapping("/pong/{uuId}")
+    public void receivePongFromClient(@Payload String message, @DestinationVariable("uuId") String uuId) {
+        UsernameEntity usernameEntity = new UsernameEntity();
+        usernameEntity.setUsername(uuId);
+
+        usernameService.saveUsername(usernameEntity);
+    }
+
+    public void alertUsernameDeletion(String username) {
+        simpMessagingTemplate.convertAndSend("/topic/remove/" + username, "Ba Bye");
     }
 }

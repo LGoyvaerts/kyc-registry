@@ -50,7 +50,8 @@ public class UsernameService {
     public UsernameEntity saveUsername(UsernameEntity username) {
         Optional<UsernameEntity> byUsername = usernameRepository.findByUsername(username.getUsername());
         if (byUsername.isPresent()) {
-            return byUsername.get();
+            byUsername.get().setRegistred(ZonedDateTime.now());
+            return usernameRepository.save(byUsername.get());
         } else {
             username.setRegistred(ZonedDateTime.now());
             return usernameRepository.save(username);
@@ -63,6 +64,10 @@ public class UsernameService {
 
     public void removeUsernameByName(String username) {
         usernameRepository.findByUsername(username).ifPresent(usernameRepository::delete);
+    }
+
+    public void deleteUsername(UsernameEntity usernameEntity){
+        usernameRepository.delete(usernameEntity);
     }
 
     public Iterable<UsernameEntity> findAll() {
