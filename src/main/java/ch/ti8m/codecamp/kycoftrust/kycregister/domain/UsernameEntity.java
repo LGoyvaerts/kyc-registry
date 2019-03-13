@@ -5,7 +5,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.validation.constraints.NotNull;
-import java.time.ZonedDateTime;
+import java.util.Date;
 
 @Entity
 public class UsernameEntity {
@@ -19,7 +19,19 @@ public class UsernameEntity {
     private String username;
 
     @Column(nullable = false)
-    private ZonedDateTime registred;
+    private Date registred;
+
+    @Column
+    private String genesisHash;
+
+    @Column
+    private String genesisName;
+
+    @Column
+    private String genesisImagepath;
+
+    @Column(name = "genesisCreatedOn")
+    private Date genesisCreatedOn;
 
     public UsernameEntity() {
     }
@@ -40,19 +52,56 @@ public class UsernameEntity {
         this.username = username;
     }
 
-    public ZonedDateTime getRegistred() {
+    public Date getRegistred() {
         return registred;
     }
 
-    public void setRegistred(ZonedDateTime registred) {
+    public void setRegistred(Date registred) {
         this.registred = registred;
+    }
+
+    public String getGenesisHash() {
+        return genesisHash;
+    }
+
+    public void setGenesisHash(String genesisHash) {
+        this.genesisHash = genesisHash;
+    }
+
+    public String getGenesisName() {
+        return genesisName;
+    }
+
+    public void setGenesisName(String genesisName) {
+        this.genesisName = genesisName;
+    }
+
+    public String getGenesisImagepath() {
+        return genesisImagepath;
+    }
+
+    public void setGenesisImagepath(String genesisImagepath) {
+        this.genesisImagepath = genesisImagepath;
+    }
+
+    public Date getGenesisCreatedOn() {
+        return genesisCreatedOn;
+    }
+
+    public void setGenesisCreatedOn(Date genesisCreatedOn) {
+        this.genesisCreatedOn = genesisCreatedOn;
     }
 
     @Override
     public String toString() {
-        return "Username{" +
-                "id = " + id +
-                ", username = " + username
-                + "}";
+        return "UsernameEntity{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", registred=" + registred +
+                ", genesisHash='" + genesisHash + '\'' +
+                ", genesisName='" + genesisName + '\'' +
+                ", genesisImagepath='" + genesisImagepath + '\'' +
+                ", genesisCreatedOn=" + genesisCreatedOn +
+                '}';
     }
 }

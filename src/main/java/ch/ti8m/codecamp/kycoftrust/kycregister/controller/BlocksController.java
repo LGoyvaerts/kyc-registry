@@ -16,7 +16,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 
-import java.time.ZonedDateTime;
+import java.io.IOException;
+import java.util.List;
 
 @Controller
 public class BlocksController {
@@ -32,37 +33,39 @@ public class BlocksController {
 
     @MessageMapping("/unregister/{uuId}")
     public void unregister(@Payload String message, @DestinationVariable("uuId") String uuId) {
-        log.info("[/unregister] Client with UUID = " + uuId + " is unregistering himself.");
+        log.info("[/unregister/" + uuId + "] Client is unregistering himself.");
+        UsernameEntity usernameEntityToAlert = usernameService.getUsernameByUsername(uuId);
         usernameService.removeUsernameByName(uuId);
+
+        if (usernameEntityToAlert.getGenesisHash() != null) {
+            if (!usernameService.isGenesisStillExisting(uuId)) {
+                log.info("[/unregister] Genesis is getting deleted: " + usernameEntityToAlert.getGenesisHash());
+                alertGenesisDeletion(usernameEntityToAlert.getGenesisHash());
+            }
+        }
     }
 
-    @MessageMapping("/addBlock")
-    @SendTo("/topic/newBlock")
-    public String addBlock(String message) {
-        log.info("[/addBlock] New Block received from Client.");
+    @MessageMapping("/addBlock/{genesisHash}")
+    @SendTo("/topic/newBlock/{genesisHash}")
+    public String addBlock(@Payload String message, @DestinationVariable("genesisHash") String genesisHash) {
+        log.info("[/addBlock/" + genesisHash + "] New Block received from Client.");
         return message;
     }
 
-    @MessageMapping("/getBlocks/{uuId}/{startIndex}")
-    public void getBlocksFromFirstUsername(@Payload String message, @DestinationVariable("uuId") String uuId, @DestinationVariable("startIndex") String startIndex) throws JsonProcessingException {
-        UsernameEntity firstUsername = usernameService.getFirstUsername();
-        if (firstUsername != null) {
-            String targetUuid = "";
-            log.info("[/getBlocks] Client with UUID = " + uuId + " is getting Blocks with startIndex = " + startIndex);
+    @MessageMapping("/getBlocks/{genesisHash}/{uuId}/{startIndex}")
+    public void getBlocksFromFirstUsername(@Payload String message, @DestinationVariable("genesisHash") String genesisHash, @DestinationVariable("uuId") String uuId, @DestinationVariable("startIndex") String startIndex) {
+        try {
+            simpMessagingTemplate.setDefaultDestination("/topic");
             BlockRequest blockRequest = new BlockRequest(Long.parseLong(startIndex), uuId);
             String blockRequestAsString = objectMapper.writeValueAsString(blockRequest);
-            simpMessagingTemplate.setDefaultDestination("/topic");
-            if (firstUsername.getUsername().equals(uuId)) {
-                if (usernameService.getSecondUsername() != null) {
-                    targetUuid = usernameService.getSecondUsername().getUsername();
-                }
-            } else {
-                targetUuid = firstUsername.getUsername();
-            }
-            simpMessagingTemplate.convertAndSend("/topic/getBlocks/" + targetUuid, blockRequestAsString);
 
-        } else {
-            log.error("[/getBlocks] First Username was not found.");
+            String targetUuid = usernameService.getTargetUuid(genesisHash, uuId);
+
+            if (targetUuid != null) {
+                simpMessagingTemplate.convertAndSend("/topic/getBlocks/" + targetUuid, blockRequestAsString);
+            }
+        } catch (JsonProcessingException e) {
+            log.error("[/getBlocks] Error Processing JSON: " + e.getMessage());
         }
     }
 
@@ -73,25 +76,57 @@ public class BlocksController {
         return message;
     }
 
-    @MessageMapping("/invalidate")
-    @SendTo("/topic/invalidate")
-    public String invalidateBlock(@Payload String message) {
-        log.info("[/invalidate] Block invalidated. Block: " + message);
+    @MessageMapping("/invalidate/{genesisHash}")
+    @SendTo("/topic/invalidate/{genesisHash}")
+    public String invalidateBlock(@Payload String message, @DestinationVariable("genesisHash") String genesisHash) {
+        log.info("[/invalidate/" + genesisHash + "] Block invalidated. Block: " + message);
         return message;
     }
 
-    @Scheduled(initialDelay = 1000L, fixedDelay = 1000L)
-    public void pingToClient() {
-        Iterable<UsernameEntity> usernameEntityIterable = usernameService.findAll();
+    @MessageMapping("/getActiveGenesises/{uuId}")
+    public void sendActiveGenesisesToClient(@DestinationVariable("uuId") String uuId) {
+        log.info("[/getActiveGenesises/" + uuId + "] Client is requesting active Genesises");
 
-        for (UsernameEntity usernameEntity : usernameEntityIterable) {
-            if (usernameEntity.getRegistred().isBefore(ZonedDateTime.now().minusSeconds(2))) {
-                log.info("Removing Client from List: " + usernameEntity.getUsername());
-                alertUsernameDeletion(usernameEntity.getUsername());
-                usernameService.deleteUsername(usernameEntity);
-            }
+        List<UsernameEntity> usernameEntities = usernameService.getActiveGenesises();
+
+        try {
+            simpMessagingTemplate.convertAndSend("/topic/setActiveGenesises/" + uuId, objectMapper.writeValueAsString(usernameEntities));
+        } catch (JsonProcessingException e) {
+            log.error("[/topic/setActiveGenesises/" + uuId + "] Could not send active Genesises to Client: " + e.getMessage());
         }
+    }
 
+    @MessageMapping("/setGenesis/{uuId}")
+    public void setGenesisOfClient(@Payload String genesisAsString, @DestinationVariable("uuId") String uuId) {
+
+        try {
+            log.info("[/setGenesis/" + uuId + "] Setting Genesis to UUID");
+            UsernameEntity usernameWithGenesis = objectMapper.readValue(genesisAsString, UsernameEntity.class);
+
+            if (!usernameService.isGenesisAlreadyExisting(usernameWithGenesis)) {
+                alertNewGenesis(usernameWithGenesis);
+            } else {
+                log.info("Genesis is already existing. Adding Client to Active Genesis List.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Scheduled(initialDelay = 5000L, fixedDelay = 5000L)
+    public void pingToClient() {
+        simpMessagingTemplate.setDefaultDestination("/topic");
+
+        List<UsernameEntity> unresponsiveUsernameEntityList = usernameService.getUnresponsiveList();
+        for (UsernameEntity usernameEntityToAlert : unresponsiveUsernameEntityList) {
+            log.info("[PING] Removing Username from Registry: " + usernameEntityToAlert.getUsername());
+            alertUsernameDeletion(usernameEntityToAlert.getGenesisHash());
+
+            if (!usernameService.isGenesisStillExisting(usernameEntityToAlert)) {
+                alertGenesisDeletion(usernameEntityToAlert.getGenesisHash());
+            }
+
+        }
         simpMessagingTemplate.convertAndSend("/topic/ping", "ping");
 
     }
@@ -105,6 +140,23 @@ public class BlocksController {
     }
 
     public void alertUsernameDeletion(String username) {
-        simpMessagingTemplate.convertAndSend("/topic/remove/" + username, "Ba Bye");
+        simpMessagingTemplate.setDefaultDestination("/topic");
+        simpMessagingTemplate.convertAndSend("/topic/removeUsername/" + username, "Ba Bye");
+    }
+
+    public void alertGenesisDeletion(String genesisHash) {
+        simpMessagingTemplate.setDefaultDestination("/topic");
+        simpMessagingTemplate.convertAndSend("/topic/removeGenesis", genesisHash);
+    }
+
+    public void alertNewGenesis(UsernameEntity genesisEntity) {
+        try {
+            UsernameEntity genesisWithStamps = usernameService.getUsernameByUsername(genesisEntity.getUsername());
+            simpMessagingTemplate.setDefaultDestination("/topic");
+            simpMessagingTemplate.convertAndSend("/topic/newGenesis", objectMapper.writeValueAsString(genesisWithStamps));
+            log.info("[/publishgenesis] New Genesis published. Hash: " + genesisEntity.getGenesisHash());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
